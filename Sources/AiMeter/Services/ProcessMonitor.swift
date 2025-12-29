@@ -2,6 +2,7 @@ import Foundation
 
 struct ProcessInfo {
     let pid: Int32
+    let ppid: Int32
     let name: String
     let command: String
     let workingDirectory: String
@@ -17,34 +18,43 @@ final class ProcessMonitor: Sendable {
     private init() {}
 
     func findAgentProcesses() -> [ProcessInfo] {
-        // Single ps call with grep for broad initial filter
-        let psOutput = shell("ps -eo pid,lstart,pcpu,args | grep -iE '\(AgentType.grepPattern)' | grep -v grep | grep -v menubar-agent")
+        // Single ps call with grep for broad initial filter - include ppid for deduplication
+        let psOutput = shell("ps -eo pid,ppid,lstart,pcpu,args | grep -iE '\(AgentType.grepPattern)' | grep -v grep | grep -v aimeter")
         
         let lines = psOutput.split(separator: "\n")
         guard !lines.isEmpty else { return [] }
         
         // Parse and identify processes
-        var pidToProcess: [Int32: (line: String, type: AgentType)] = [:]
+        var pidToProcess: [Int32: (line: String, type: AgentType, ppid: Int32)] = [:]
         
         for line in lines {
             let lineStr = String(line).trimmingCharacters(in: .whitespaces)
             let components = lineStr.split(separator: " ", omittingEmptySubsequences: true)
-            guard components.count >= 8,
-                  let pid = Int32(components.first ?? "") else { continue }
+            guard components.count >= 9,
+                  let pid = Int32(components[0]),
+                  let ppid = Int32(components[1]) else { continue }
             
-            // Extract full command args (index 7 onwards)
-            let args = components[7...].joined(separator: " ")
+            // Extract full command args (index 8 onwards, since we added ppid)
+            let args = components[8...].joined(separator: " ")
             
             // Try to identify which agent this is
             if let agentType = identifyAgent(args: args) {
-                pidToProcess[pid] = (lineStr, agentType)
+                pidToProcess[pid] = (lineStr, agentType, ppid)
             }
         }
         
         guard !pidToProcess.isEmpty else { return [] }
         
+        // Get all detected PIDs for parent filtering
+        let detectedPids = Set(pidToProcess.keys)
+        
+        // Filter out processes whose parent is also a detected agent (keep only top-level)
+        let topLevelPids = pidToProcess.filter { !detectedPids.contains($0.value.ppid) }
+        
+        guard !topLevelPids.isEmpty else { return [] }
+        
         // Batch lsof call for all PIDs at once
-        let pidList = pidToProcess.keys.map(String.init).joined(separator: ",")
+        let pidList = topLevelPids.keys.map(String.init).joined(separator: ",")
         let cwdMap = batchGetWorkingDirectories(pids: pidList)
         let ttyMap = batchGetTTYs(pids: pidList)
         
@@ -54,8 +64,9 @@ final class ProcessMonitor: Sendable {
         dateFormatter.locale = Locale(identifier: "en_US_POSIX")
         
         var processes: [ProcessInfo] = []
-        for (pid, data) in pidToProcess {
-            if let info = parseProcessLine(data.line, pid: pid, agentType: data.type, cwd: cwdMap[pid] ?? "~", tty: ttyMap[pid], dateFormatter: dateFormatter) {
+        for (pid, data) in topLevelPids {
+            let cwd = cwdMap[pid] ?? "~"
+            if let info = parseProcessLine(data.line, pid: pid, ppid: data.ppid, agentType: data.type, cwd: cwd, tty: ttyMap[pid], dateFormatter: dateFormatter) {
                 processes.append(info)
             }
         }
@@ -112,24 +123,25 @@ final class ProcessMonitor: Sendable {
         return false
     }
 
-    private func parseProcessLine(_ line: String, pid: Int32, agentType: AgentType, cwd: String, tty: String?, dateFormatter: DateFormatter) -> ProcessInfo? {
+    private func parseProcessLine(_ line: String, pid: Int32, ppid: Int32, agentType: AgentType, cwd: String, tty: String?, dateFormatter: DateFormatter) -> ProcessInfo? {
         let components = line.split(separator: " ", omittingEmptySubsequences: true)
-        guard components.count >= 8 else { return nil }
+        guard components.count >= 9 else { return nil }
 
-        // Parse lstart (indices 1-5)
-        let dateComponents = components[1...5]
+        // Parse lstart (indices 2-6, since ppid is at index 1)
+        let dateComponents = components[2...6]
         let dateString = dateComponents.joined(separator: " ")
         let startTime = dateFormatter.date(from: dateString) ?? Date()
 
-        // CPU usage at index 6
-        let cpuUsage = Double(components[6]) ?? 0.0
+        // CPU usage at index 7
+        let cpuUsage = Double(components[7]) ?? 0.0
 
-        // Args start at index 7
-        let args = components[7...].joined(separator: " ")
-        let processName = URL(fileURLWithPath: String(components[7])).lastPathComponent
+        // Args start at index 8
+        let args = components[8...].joined(separator: " ")
+        let processName = URL(fileURLWithPath: String(components[8])).lastPathComponent
 
         return ProcessInfo(
             pid: pid,
+            ppid: ppid,
             name: processName,
             command: args,
             workingDirectory: cwd,
