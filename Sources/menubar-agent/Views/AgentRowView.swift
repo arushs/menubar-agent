@@ -12,10 +12,10 @@ struct AgentRowView: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 6) {
             // Agent name and status
-            HStack(spacing: 8) {
-                Circle()
-                    .fill(statusColor)
-                    .frame(width: 8, height: 8)
+            HStack(spacing: 6) {
+                Image(systemName: "terminal.fill")
+                    .font(.system(size: 12))
+                    .foregroundColor(.secondary)
 
                 Text(agent.type.displayName)
                     .font(.system(size: 13, weight: .medium))
@@ -41,7 +41,35 @@ struct AgentRowView: View {
 
                 Spacer()
             }
-            .padding(.leading, 16)
+            .padding(.leading, 18)
+            
+            // Session stats (if available)
+            if let stats = agent.sessionStats, stats.totalTokens > 0 {
+                HStack(spacing: 8) {
+                    if !stats.formattedTokens.isEmpty {
+                        HStack(spacing: 3) {
+                            Image(systemName: "text.word.spacing")
+                                .font(.system(size: 9))
+                            Text(stats.formattedTokens)
+                                .font(.system(size: 10))
+                        }
+                        .foregroundColor(.secondary)
+                    }
+                    
+                    if !stats.formattedCost.isEmpty {
+                        HStack(spacing: 3) {
+                            Image(systemName: "dollarsign.circle")
+                                .font(.system(size: 9))
+                            Text(stats.formattedCost)
+                                .font(.system(size: 10))
+                        }
+                        .foregroundColor(.secondary)
+                    }
+                    
+                    Spacer()
+                }
+                .padding(.leading, 18)
+            }
 
             // Action buttons
             HStack(spacing: 8) {
@@ -106,12 +134,5 @@ struct AgentRowView: View {
         }
     }
 
-    private var statusColor: Color {
-        switch agent.status {
-        case .idle:
-            return .green
-        case .active:
-            return .yellow
-        }
-    }
+
 }

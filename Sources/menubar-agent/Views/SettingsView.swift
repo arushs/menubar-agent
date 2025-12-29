@@ -36,20 +36,23 @@ struct SettingsView: View {
             }
 
             GroupBox("Monitored Agents") {
-                VStack(alignment: .leading, spacing: 8) {
-                    ForEach(AgentType.allCases) { agentType in
-                        HStack {
-                            Image(systemName: "checkmark.circle.fill")
-                                .foregroundColor(.green)
-                            Text(agentType.displayName)
-                            Spacer()
-                            Text(agentType.processNames.joined(separator: ", "))
-                                .font(.system(size: 11, design: .monospaced))
-                                .foregroundColor(.secondary)
+                ScrollView {
+                    VStack(alignment: .leading, spacing: 8) {
+                        ForEach(AgentType.allCases) { agentType in
+                            HStack {
+                                Image(systemName: "checkmark.circle.fill")
+                                    .foregroundColor(.green)
+                                Text(agentType.displayName)
+                                Spacer()
+                                Text(agentType.pattern.patterns.first ?? "")
+                                    .font(.system(size: 11, design: .monospaced))
+                                    .foregroundColor(.secondary)
+                            }
                         }
                     }
+                    .padding(8)
                 }
-                .padding(8)
+                .frame(maxHeight: 150)
             }
 
             Spacer()

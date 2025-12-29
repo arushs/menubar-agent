@@ -26,24 +26,21 @@ struct MenuContentView: View {
                 .padding(.vertical, 24)
             } else {
                 // Agent list
-                ScrollView {
-                    VStack(spacing: 2) {
-                        ForEach(agentManager.agents) { agent in
-                            AgentRowView(
-                                agent: agent,
-                                onOpenTerminal: { agentManager.openInTerminal(agent) },
-                                onCopyPath: { agentManager.copyPath(agent) },
-                                onKill: { agentManager.killAgent(agent) }
-                            )
+                VStack(spacing: 0) {
+                    ForEach(agentManager.agents) { agent in
+                        AgentRowView(
+                            agent: agent,
+                            onOpenTerminal: { agentManager.openInTerminal(agent) },
+                            onCopyPath: { agentManager.copyPath(agent) },
+                            onKill: { agentManager.killAgent(agent) }
+                        )
 
-                            if agent.id != agentManager.agents.last?.id {
-                                Divider()
-                                    .padding(.horizontal, 12)
-                            }
+                        if agent.id != agentManager.agents.last?.id {
+                            Divider()
+                                .padding(.horizontal, 12)
                         }
                     }
                 }
-                .frame(maxHeight: 400)
             }
 
             Divider()

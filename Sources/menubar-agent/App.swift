@@ -17,7 +17,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     private var statusItem: NSStatusItem!
     private var popover: NSPopover!
     private var agentManager: AgentManager!
-    private var statusObserver: NSKeyValueObservation?
+    private var popoverContentController: NSHostingController<MenuContentView>!
     private var firstLaunchWindow: NSWindow?
     private var updateTimer: Timer?
 
@@ -51,11 +51,26 @@ class AppDelegate: NSObject, NSApplicationDelegate {
             button.target = self
         }
 
-        // Create popover
+        // Create popover with cached content controller
         popover = NSPopover()
         popover.contentSize = NSSize(width: 280, height: 400)
         popover.behavior = .transient
-        popover.animates = true
+        popover.animates = false
+        
+        // Create content view once and reuse
+        let contentView = MenuContentView(
+            agentManager: agentManager,
+            showSettings: Binding(
+                get: { false },
+                set: { [weak self] _ in
+                    Task { @MainActor in
+                        self?.showSettings()
+                    }
+                }
+            )
+        )
+        popoverContentController = NSHostingController(rootView: contentView)
+        popover.contentViewController = popoverContentController
 
         // Update icon periodically
         updateTimer = Timer.scheduledTimer(withTimeInterval: 1.0, repeats: true) { [weak self] _ in
@@ -69,38 +84,10 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         guard let button = statusItem.button else { return }
 
         let symbolConfig = NSImage.SymbolConfiguration(pointSize: 16, weight: .medium)
-
-        if agentManager.hasWorkingAgents {
-            // Yellow - actively working
-            let image = NSImage(systemSymbolName: "terminal.fill", accessibilityDescription: "Agents Active")
-            image?.isTemplate = false
-            if let coloredImage = image?.withSymbolConfiguration(symbolConfig) {
-                button.image = tintedImage(coloredImage, color: .systemYellow)
-            }
-        } else if agentManager.hasActiveAgents {
-            // Green - agents running but idle
-            let image = NSImage(systemSymbolName: "terminal.fill", accessibilityDescription: "Agents Running")
-            image?.isTemplate = false
-            if let coloredImage = image?.withSymbolConfiguration(symbolConfig) {
-                button.image = tintedImage(coloredImage, color: .systemGreen)
-            }
-        } else {
-            // Gray - no agents
-            let image = NSImage(systemSymbolName: "terminal", accessibilityDescription: "No Agents")
-            image?.isTemplate = true
-            button.image = image?.withSymbolConfiguration(symbolConfig)
-        }
-    }
-
-    private func tintedImage(_ image: NSImage, color: NSColor) -> NSImage {
-        let tinted = image.copy() as! NSImage
-        tinted.lockFocus()
-        color.set()
-        let imageRect = NSRect(origin: .zero, size: tinted.size)
-        imageRect.fill(using: .sourceAtop)
-        tinted.unlockFocus()
-        tinted.isTemplate = false
-        return tinted
+        let symbolName = agentManager.hasActiveAgents ? "terminal.fill" : "terminal"
+        let image = NSImage(systemSymbolName: symbolName, accessibilityDescription: "Agent Tracker")
+        image?.isTemplate = true
+        button.image = image?.withSymbolConfiguration(symbolConfig)
     }
 
     @objc private func togglePopover() {
@@ -109,21 +96,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         if popover.isShown {
             popover.performClose(nil)
         } else {
-            let contentView = MenuContentView(
-                agentManager: agentManager,
-                showSettings: Binding(
-                    get: { false },
-                    set: { [weak self] _ in
-                        Task { @MainActor in
-                            self?.showSettings()
-                        }
-                    }
-                )
-            )
-            popover.contentViewController = NSHostingController(rootView: contentView)
             popover.show(relativeTo: button.bounds, of: button, preferredEdge: .minY)
-
-            // Make popover the key window
             popover.contentViewController?.view.window?.makeKey()
         }
     }
