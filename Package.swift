@@ -2,17 +2,17 @@
 import PackageDescription
 
 let package = Package(
-    name: "menubar-agent",
+    name: "AiMeter",
     platforms: [
         .macOS(.v14)
     ],
     products: [
-        .executable(name: "menubar-agent", targets: ["menubar-agent"])
+        .executable(name: "aimeter", targets: ["AiMeter"])
     ],
     targets: [
         .executableTarget(
-            name: "menubar-agent",
-            path: "Sources/menubar-agent"
+            name: "AiMeter",
+            path: "Sources/AiMeter"
         )
     ]
 )

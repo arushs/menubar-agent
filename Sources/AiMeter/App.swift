@@ -2,7 +2,7 @@ import SwiftUI
 import AppKit
 
 @main
-struct AgentMenuBarApp: App {
+struct AiMeterApp: App {
     @NSApplicationDelegateAdaptor(AppDelegate.self) var appDelegate
 
     var body: some Scene {
@@ -85,7 +85,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
 
         let symbolConfig = NSImage.SymbolConfiguration(pointSize: 16, weight: .medium)
         let symbolName = agentManager.hasActiveAgents ? "terminal.fill" : "terminal"
-        let image = NSImage(systemSymbolName: symbolName, accessibilityDescription: "Agent Tracker")
+        let image = NSImage(systemSymbolName: symbolName, accessibilityDescription: "AiMeter")
         image?.isTemplate = true
         button.image = image?.withSymbolConfiguration(symbolConfig)
     }

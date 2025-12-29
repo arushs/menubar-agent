@@ -3,11 +3,11 @@
 <plist version="1.0">
 <dict>
     <key>CFBundleName</key>
-    <string>Agent Tracker</string>
+    <string>AiMeter</string>
     <key>CFBundleDisplayName</key>
-    <string>Agent Tracker</string>
+    <string>AiMeter</string>
     <key>CFBundleIdentifier</key>
-    <string>com.agenttracker.menubar</string>
+    <string>com.aimeter.app</string>
     <key>CFBundleVersion</key>
     <string>1.0</string>
     <key>CFBundleShortVersionString</key>
@@ -15,9 +15,9 @@
     <key>CFBundlePackageType</key>
     <string>APPL</string>
     <key>CFBundleExecutable</key>
-    <string>AgentMenuBar</string>
+    <string>aimeter</string>
     <key>LSMinimumSystemVersion</key>
-    <string>13.0</string>
+    <string>14.0</string>
     <key>LSUIElement</key>
     <true/>
     <key>NSHighResolutionCapable</key>

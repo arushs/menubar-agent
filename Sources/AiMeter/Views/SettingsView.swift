@@ -95,16 +95,16 @@ struct FirstLaunchView: View {
                 .foregroundColor(.accentColor)
 
             VStack(spacing: 8) {
-                Text("Welcome to Agent Tracker")
+                Text("Welcome to AiMeter")
                     .font(.title)
                     .fontWeight(.semibold)
 
-                Text("Monitor your CLI coding agents from the menu bar")
+                Text("Monitor your AI coding agents from the menu bar")
                     .foregroundColor(.secondary)
             }
 
             VStack(spacing: 12) {
-                Text("Would you like Agent Tracker to start automatically when you log in?")
+                Text("Would you like AiMeter to start automatically when you log in?")
                     .multilineTextAlignment(.center)
 
                 HStack(spacing: 16) {

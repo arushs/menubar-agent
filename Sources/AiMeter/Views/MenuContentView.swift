@@ -17,7 +17,7 @@ struct MenuContentView: View {
                         .font(.system(size: 13))
                         .foregroundColor(.secondary)
 
-                    Text("Start Claude Code, Codex, Aider,\nor Cursor Agent to see them here")
+                    Text("Start OpenCode, Claude, Aider,\nor other AI agents to see them here")
                         .font(.system(size: 11))
                         .foregroundColor(.secondary)
                         .multilineTextAlignment(.center)
@@ -81,7 +81,7 @@ struct MenuContentView: View {
                     NSApplication.shared.terminate(nil)
                 }) {
                     HStack {
-                        Text("Quit Agent Tracker")
+                        Text("Quit AiMeter")
                         Spacer()
                         Text("⌘Q")
                             .foregroundColor(.secondary)
