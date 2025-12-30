@@ -48,21 +48,6 @@ struct MenuContentView: View {
 
             // Footer buttons
             VStack(spacing: 4) {
-                Button(action: {
-                    Task {
-                        await agentManager.refreshAgents()
-                    }
-                }) {
-                    HStack {
-                        Image(systemName: "arrow.clockwise")
-                        Text("Refresh")
-                        Spacer()
-                    }
-                    .padding(.horizontal, 12)
-                    .padding(.vertical, 6)
-                }
-                .buttonStyle(.plain)
-
                 Button(action: { showSettings = true }) {
                     HStack {
                         Image(systemName: "gear")
