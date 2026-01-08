@@ -41,18 +41,33 @@ class AgentManager: ObservableObject {
             ProcessMonitor.shared.findAgentProcesses()
         }.value
 
-        var newAgents: [Agent] = []
+        // Build a set of current PIDs for quick lookup
+        let currentPIDs = Set(processInfos.map { $0.pid })
+
+        // Remove agents that are no longer running (in reverse to avoid index shifting)
+        for index in agents.indices.reversed() {
+            if !currentPIDs.contains(agents[index].pid) {
+                agents.remove(at: index)
+            }
+        }
+
+        // Build a dictionary of existing agents by PID for O(1) lookup
+        var existingAgentIndices: [Int32: Int] = [:]
+        for (index, agent) in agents.enumerated() {
+            existingAgentIndices[agent.pid] = index
+        }
+
+        // Track if we need to re-sort (only when new agents are added)
+        var needsSort = false
 
         for info in processInfos {
-            // Check if we already have this agent (by PID)
-            if let existingIndex = agents.firstIndex(where: { $0.pid == info.pid }) {
-                var existing = agents[existingIndex]
-                existing.cpuUsage = info.cpuUsage
-                existing.status = info.cpuUsage > cpuThreshold ? .active : .idle
-                // Refresh stats
-                existing.sessionStats = SessionStatsReader.shared.getStats(for: existing)
-                newAgents.append(existing)
+            if let existingIndex = existingAgentIndices[info.pid] {
+                // Update existing agent in-place
+                agents[existingIndex].cpuUsage = info.cpuUsage
+                agents[existingIndex].status = info.cpuUsage > cpuThreshold ? .active : .idle
+                agents[existingIndex].sessionStats = SessionStatsReader.shared.getStats(for: agents[existingIndex])
             } else {
+                // Create new agent only for genuinely new processes
                 var agent = Agent(
                     id: UUID(),
                     pid: info.pid,
@@ -65,11 +80,16 @@ class AgentManager: ObservableObject {
                     tty: info.tty
                 )
                 agent.sessionStats = SessionStatsReader.shared.getStats(for: agent)
-                newAgents.append(agent)
+                agents.append(agent)
+                needsSort = true
             }
         }
 
-        agents = newAgents.sorted { $0.startTime > $1.startTime }
+        // Only sort when new agents were added
+        if needsSort {
+            agents.sort { $0.startTime > $1.startTime }
+        }
+
         hasActiveAgents = !agents.isEmpty
         hasWorkingAgents = agents.contains { $0.status == .active }
     }

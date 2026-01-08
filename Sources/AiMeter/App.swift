@@ -20,6 +20,11 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     private var popoverContentController: NSHostingController<MenuContentView>!
     private var firstLaunchWindow: NSWindow?
     private var updateTimer: Timer?
+    private var isPopoverVisible = false
+
+    // Timer intervals - slower updates when popover is hidden to save resources
+    private let activeUpdateInterval: TimeInterval = 1.0   // When popover is shown
+    private let idleUpdateInterval: TimeInterval = 5.0     // When popover is hidden
 
     @AppStorage("hasSeenFirstLaunch") private var hasSeenFirstLaunch = false
 
@@ -41,6 +46,26 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         }
     }
 
+    nonisolated func applicationWillTerminate(_ notification: Notification) {
+        Task { @MainActor in
+            invalidateTimer()
+        }
+    }
+
+    private func invalidateTimer() {
+        updateTimer?.invalidate()
+        updateTimer = nil
+    }
+
+    private func startTimer(interval: TimeInterval) {
+        invalidateTimer()
+        updateTimer = Timer.scheduledTimer(withTimeInterval: interval, repeats: true) { [weak self] _ in
+            Task { @MainActor [weak self] in
+                self?.updateStatusIcon()
+            }
+        }
+    }
+
     private func setupMenuBar() {
         statusItem = NSStatusBar.system.statusItem(withLength: NSStatusItem.variableLength)
 
@@ -56,7 +81,8 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         popover.contentSize = NSSize(width: 280, height: 400)
         popover.behavior = .transient
         popover.animates = false
-        
+        popover.delegate = self
+
         // Create content view once and reuse
         let contentView = MenuContentView(
             agentManager: agentManager,
@@ -72,12 +98,8 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         popoverContentController = NSHostingController(rootView: contentView)
         popover.contentViewController = popoverContentController
 
-        // Update icon periodically
-        updateTimer = Timer.scheduledTimer(withTimeInterval: 1.0, repeats: true) { [weak self] _ in
-            Task { @MainActor [weak self] in
-                self?.updateStatusIcon()
-            }
-        }
+        // Start with idle (slower) update interval since popover is closed
+        startTimer(interval: idleUpdateInterval)
     }
 
     private func updateStatusIcon() {
@@ -121,5 +143,24 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         firstLaunchWindow?.center()
         firstLaunchWindow?.makeKeyAndOrderFront(nil)
         NSApp.activate(ignoringOtherApps: true)
+    }
+}
+
+// MARK: - NSPopoverDelegate
+extension AppDelegate: NSPopoverDelegate {
+    nonisolated func popoverWillShow(_ notification: Notification) {
+        Task { @MainActor in
+            isPopoverVisible = true
+            // Switch to faster updates when popover is visible
+            startTimer(interval: activeUpdateInterval)
+        }
+    }
+
+    nonisolated func popoverDidClose(_ notification: Notification) {
+        Task { @MainActor in
+            isPopoverVisible = false
+            // Switch to slower updates when popover is hidden
+            startTimer(interval: idleUpdateInterval)
+        }
     }
 }
